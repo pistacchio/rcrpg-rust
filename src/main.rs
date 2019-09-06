@@ -23,7 +23,7 @@ const DIRECTION_MAPPING: [(Location, Direction); 6] = [
 // TYPES //
 ///////////
 
-type Invetory = HashSet<Object>;
+type Inventory = HashSet<Object>;
 type CommandAliases = Vec<(HashSet<String>, Command)>;
 
 //////////////
@@ -85,7 +85,7 @@ impl Object {
 
 struct Player {
     location: Location,
-    inventory: Invetory,
+    inventory: Inventory,
     equipped: Option<Object>,
 }
 
@@ -95,7 +95,7 @@ struct Player {
 
 struct Room {
     description: Option<String>,
-    objects: Invetory,
+    objects: Inventory,
 }
 
 impl Room {
@@ -106,8 +106,8 @@ impl Room {
         }
     }
 
-    fn with_description(mut self, descrition: &str) -> Self {
-        self.description = Some(descrition.to_string());
+    fn with_description(mut self, description: &str) -> Self {
+        self.description = Some(description.to_string());
         self
     }
 
