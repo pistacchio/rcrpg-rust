@@ -1,10 +1,10 @@
-use std::collections::{HashMap, HashSet};
-use std::iter::FromIterator;
-use std::{io, fmt};
-use std::fmt::{Display, Debug};
-use std::borrow::BorrowMut;
-use std::ops::Add;
 use rand::prelude::*;
+use std::borrow::BorrowMut;
+use std::collections::{HashMap, HashSet};
+use std::fmt::{Debug, Display};
+use std::iter::FromIterator;
+use std::ops::Add;
+use std::{fmt, io};
 
 ///////////////
 // CONSTANTS //
@@ -74,7 +74,7 @@ impl Object {
             "ladder" => Some(Object::Ladder),
             "sledge" => Some(Object::Sledge),
             "gold" => Some(Object::Gold),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -116,12 +116,27 @@ impl Room {
         self
     }
 
-    fn with_random_objects(mut self, rng: &mut ThreadRng ) -> Self {
+    fn with_random_objects(mut self, rng: &mut ThreadRng) -> Self {
         let objects: Vec<_> = vec![
-            if rng.gen::<f32>() < 0.33 { Some(Object::Sledge) } else { None },
-            if rng.gen::<f32>() < 0.33 { Some(Object::Ladder) } else { None },
-            if rng.gen::<f32>() < 0.33 { Some(Object::Gold) } else { None },
-        ].iter().filter_map(|o| *o).collect();
+            if rng.gen::<f32>() < 0.33 {
+                Some(Object::Sledge)
+            } else {
+                None
+            },
+            if rng.gen::<f32>() < 0.33 {
+                Some(Object::Ladder)
+            } else {
+                None
+            },
+            if rng.gen::<f32>() < 0.33 {
+                Some(Object::Gold)
+            } else {
+                None
+            },
+        ]
+        .iter()
+        .filter_map(|o| *o)
+        .collect();
 
         self.objects.extend(objects);
         self
@@ -164,44 +179,49 @@ impl Direction {
             "east" => Some(Direction::East),
             "down" => Some(Direction::Down),
             "up" => Some(Direction::Up),
-            _ => None
+            _ => None,
         }
     }
 
     fn to_location(&self) -> Location {
-        DIRECTION_MAPPING.iter()
-            .find(|d| d.1 == *self)
-            .unwrap()
-            .0
+        DIRECTION_MAPPING.iter().find(|d| d.1 == *self).unwrap().0
     }
 }
 
 struct Dungeon {
-    rooms: HashMap<Location, Room>
+    rooms: HashMap<Location, Room>,
 }
 
 impl Dungeon {
     fn new() -> Self {
         Dungeon {
             rooms: HashMap::from_iter(vec![
-                (Location(0, 0, 0), Room::new()
-                    .with_description("The room where it all started...")
-                    .with_objects(vec![Object::Ladder, Object::Sledge])),
-                (Location(1, 1, 5), Room::new()
-                    .with_description("You found it! Lots of gold!"))
-            ])
+                (
+                    Location(0, 0, 0),
+                    Room::new()
+                        .with_description("The room where it all started...")
+                        .with_objects(vec![Object::Ladder, Object::Sledge]),
+                ),
+                (
+                    Location(1, 1, 5),
+                    Room::new().with_description("You found it! Lots of gold!"),
+                ),
+            ]),
         }
     }
 
     fn exits_for_room(&self, location: Location) -> Vec<Direction> {
-        DIRECTION_MAPPING.iter().filter_map(|d| {
-            let location_to_test = location + d.0;
+        DIRECTION_MAPPING
+            .iter()
+            .filter_map(|d| {
+                let location_to_test = location + d.0;
 
-            if self.rooms.contains_key(&location_to_test) {
-                return Some(d.1);
-            }
-            None
-        }).collect()
+                if self.rooms.contains_key(&location_to_test) {
+                    return Some(d.1);
+                }
+                None
+            })
+            .collect()
     }
 }
 
@@ -230,37 +250,95 @@ enum Command {
 
 fn default_aliases() -> CommandAliases {
     vec![
-        (vec!["n".to_string(), "north".to_string()].into_iter().collect(), Command::North),
-        (vec!["s".to_string(), "south".to_string()].into_iter().collect(), Command::South),
-        (vec!["w".to_string(), "west".to_string()].into_iter().collect(), Command::West),
-        (vec!["e".to_string(), "east".to_string()].into_iter().collect(), Command::East),
-        (vec!["d".to_string(), "down".to_string()].into_iter().collect(), Command::Down),
-        (vec!["u".to_string(), "up".to_string()].into_iter().collect(), Command::Up),
-        (vec!["help".to_string()].into_iter().collect(), Command::Help),
+        (
+            vec!["n".to_string(), "north".to_string()]
+                .into_iter()
+                .collect(),
+            Command::North,
+        ),
+        (
+            vec!["s".to_string(), "south".to_string()]
+                .into_iter()
+                .collect(),
+            Command::South,
+        ),
+        (
+            vec!["w".to_string(), "west".to_string()]
+                .into_iter()
+                .collect(),
+            Command::West,
+        ),
+        (
+            vec!["e".to_string(), "east".to_string()]
+                .into_iter()
+                .collect(),
+            Command::East,
+        ),
+        (
+            vec!["d".to_string(), "down".to_string()]
+                .into_iter()
+                .collect(),
+            Command::Down,
+        ),
+        (
+            vec!["u".to_string(), "up".to_string()]
+                .into_iter()
+                .collect(),
+            Command::Up,
+        ),
+        (
+            vec!["help".to_string()].into_iter().collect(),
+            Command::Help,
+        ),
         (vec!["dig".to_string()].into_iter().collect(), Command::Dig),
-        (vec!["l".to_string(), "look".to_string()].into_iter().collect(), Command::Look),
-        (vec!["i".to_string(), "inventory".to_string()].into_iter().collect(), Command::Inventory),
-        (vec!["take".to_string()].into_iter().collect(), Command::Take),
-        (vec!["drop".to_string()].into_iter().collect(), Command::Drop),
-        (vec!["equip".to_string()].into_iter().collect(), Command::Equip),
-        (vec!["unequip".to_string()].into_iter().collect(), Command::Unequip),
-        (vec!["alias".to_string()].into_iter().collect(), Command::Alias),
+        (
+            vec!["l".to_string(), "look".to_string()]
+                .into_iter()
+                .collect(),
+            Command::Look,
+        ),
+        (
+            vec!["i".to_string(), "inventory".to_string()]
+                .into_iter()
+                .collect(),
+            Command::Inventory,
+        ),
+        (
+            vec!["take".to_string()].into_iter().collect(),
+            Command::Take,
+        ),
+        (
+            vec!["drop".to_string()].into_iter().collect(),
+            Command::Drop,
+        ),
+        (
+            vec!["equip".to_string()].into_iter().collect(),
+            Command::Equip,
+        ),
+        (
+            vec!["unequip".to_string()].into_iter().collect(),
+            Command::Unequip,
+        ),
+        (
+            vec!["alias".to_string()].into_iter().collect(),
+            Command::Alias,
+        ),
     ]
 }
 
 fn find_command(command: &str, aliases: &CommandAliases) -> Option<Command> {
     let command = command.to_lowercase();
 
-    aliases.iter()
-        .find(|a| a.0.contains(&command))
-        .map(|a| a.1)
+    aliases.iter().find(|a| a.0.contains(&command)).map(|a| a.1)
 }
 
 fn help() {
-    println!("You need a sledge to dig rooms and ladders to go upwards.
+    println!(
+        "You need a sledge to dig rooms and ladders to go upwards.
 Valid commands are: directions (north, south...), dig, take, drop, equip, inventory and look.
 Additionally you can tag rooms with the 'name' command and alias commands with 'alias'.
-Have fun!")
+Have fun!"
+    )
 }
 
 fn alias(command_aliases: &mut CommandAliases, args: &[&str]) {
@@ -295,26 +373,31 @@ fn look(player: &Player, dungeon: &Dungeon) {
         print!("Room at {:?}.", player.location);
     }
 
-
     if !room.objects.is_empty() {
-        print!(" On the floor you can see: {}.", room.objects
-            .iter()
-            .map(|o| o.to_string())
-            .collect::<Vec<String>>()
-            .join(", "));
+        print!(
+            " On the floor you can see: {}.",
+            room.objects
+                .iter()
+                .map(|o| o.to_string())
+                .collect::<Vec<String>>()
+                .join(", ")
+        );
     }
 
     let room_exits = dungeon.exits_for_room(player.location);
     match room_exits.len() {
         0 => println!(" There are no exits in this room."),
         1 => println!(" There is one exit: {}.", room_exits[0].to_string()),
-        _ => println!(" Exits: {}.", room_exits.iter()
-            .map(|o| o.to_string())
-            .collect::<Vec<String>>()
-            .join(", "))
+        _ => println!(
+            " Exits: {}.",
+            room_exits
+                .iter()
+                .map(|o| o.to_string())
+                .collect::<Vec<String>>()
+                .join(", ")
+        ),
     }
 }
-
 
 fn take(player: &mut Player, dungeon: &mut Dungeon, args: &[&str]) {
     if args.is_empty() {
@@ -322,7 +405,9 @@ fn take(player: &mut Player, dungeon: &mut Dungeon, args: &[&str]) {
     } else if dungeon.rooms[&player.location].objects.is_empty() {
         println!("There is nothing to take here")
     } else if args[0] == "all" {
-        let room_objects = dungeon.rooms.get_mut(&player.location)
+        let room_objects = dungeon
+            .rooms
+            .get_mut(&player.location)
             .expect("The player is in a room that should not exist!")
             .objects
             .borrow_mut();
@@ -332,7 +417,9 @@ fn take(player: &mut Player, dungeon: &mut Dungeon, args: &[&str]) {
 
         println!("All items taken");
     } else if let Some(object) = Object::from_string(args[0]) {
-        let room_objects = dungeon.rooms.get_mut(&player.location)
+        let room_objects = dungeon
+            .rooms
+            .get_mut(&player.location)
             .expect("The player is in a room that should not exist!")
             .objects
             .borrow_mut();
@@ -353,7 +440,9 @@ fn drop(player: &mut Player, dungeon: &mut Dungeon, args: &[&str]) {
     } else if player.inventory.is_empty() {
         println!("You are not carrying anything")
     } else if args[0] == "all" {
-        let room_objects = dungeon.rooms.get_mut(&player.location)
+        let room_objects = dungeon
+            .rooms
+            .get_mut(&player.location)
             .expect("The player is in a room that should not exist!")
             .objects
             .borrow_mut();
@@ -363,7 +452,9 @@ fn drop(player: &mut Player, dungeon: &mut Dungeon, args: &[&str]) {
 
         println!("All items dropped");
     } else if let Some(object) = Object::from_string(args[0]) {
-        let room_objects = dungeon.rooms.get_mut(&player.location)
+        let room_objects = dungeon
+            .rooms
+            .get_mut(&player.location)
             .expect("The player is in a room that should not exist!")
             .objects
             .borrow_mut();
@@ -382,11 +473,15 @@ fn inventory(player: &Player) {
     if player.inventory.is_empty() {
         println!("You are not carrying anything")
     } else {
-        println!("You are carrying: {}", player.inventory
-            .iter()
-            .map(|o| o.to_string())
-            .collect::<Vec<String>>()
-            .join(", "));
+        println!(
+            "You are carrying: {}",
+            player
+                .inventory
+                .iter()
+                .map(|o| o.to_string())
+                .collect::<Vec<String>>()
+                .join(", ")
+        );
     }
 }
 
@@ -420,7 +515,11 @@ fn dig(player: &Player, dungeon: &mut Dungeon, rng: &mut ThreadRng, args: &[&str
 }
 
 fn goto(player: &mut Player, dungeon: &Dungeon, direction: &Direction) {
-    if direction == &Direction::North && !dungeon.rooms[&player.location].objects.contains(&Object::Ladder) {
+    if direction == &Direction::North
+        && !dungeon.rooms[&player.location]
+            .objects
+            .contains(&Object::Ladder)
+    {
         println!("You can't go upwards without a ladder!");
     } else {
         let target_location = player.location + direction.to_location();
@@ -477,7 +576,9 @@ fn main() {
 
     loop {
         let mut input = String::new();
-        io::stdin().read_line(&mut input).expect("Cannot read from stdin");
+        io::stdin()
+            .read_line(&mut input)
+            .expect("Cannot read from stdin");
         let input: &str = &input.trim().to_lowercase();
 
         let splitted = input.split_whitespace().collect::<Vec<&str>>();
@@ -499,7 +600,7 @@ fn main() {
                 Some(Command::East) => goto(&mut player, &dungeon, &Direction::East),
                 Some(Command::Down) => goto(&mut player, &dungeon, &Direction::Down),
                 Some(Command::Up) => goto(&mut player, &dungeon, &Direction::Up),
-                _ => println!("I don't know what you mean.")
+                _ => println!("I don't know what you mean."),
             }
         }
     }
