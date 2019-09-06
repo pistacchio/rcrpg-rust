@@ -179,8 +179,8 @@ impl Direction {
 
     /// Returns the normalized 3D point of the location, for instance `Direction::North` is
     /// `(0, -1, 0)` where `(x, y, z)`
-    fn to_location(&self) -> Location {
-        DIRECTION_MAPPING.iter().find(|d| d.1 == *self).unwrap().0
+    fn to_location(self) -> Location {
+        DIRECTION_MAPPING.iter().find(|d| d.1 == self).unwrap().0
     }
 }
 
@@ -324,7 +324,7 @@ fn default_aliases() -> CommandAliases {
 }
 
 /// Tries to parse a string to a command also taking into account the aliases
-fn find_command(command: &str, aliases: &CommandAliases) -> Option<Command> {
+fn find_command(command: &str, aliases: &[(HashSet<String>, Command)]) -> Option<Command> {
     let command = command.to_lowercase();
 
     aliases.iter().find(|a| a.0.contains(&command)).map(|a| a.1)
@@ -520,8 +520,8 @@ fn dig(player: &Player, dungeon: &mut Dungeon, rng: &mut ThreadRng, args: &[&str
 }
 
 /// Moves the player to an adjacent room
-fn goto(player: &mut Player, dungeon: &Dungeon, direction: &Direction) {
-    if direction == &Direction::North
+fn goto(player: &mut Player, dungeon: &Dungeon, direction: Direction) {
+    if direction == Direction::North
         && !dungeon.rooms[&player.location]
             .objects
             .contains(&Object::Ladder)
@@ -599,12 +599,12 @@ fn main() {
                 Some(Command::Dig) => dig(&player, &mut dungeon, &mut rng, &splitted[1..]),
                 Some(Command::Equip) => equip(&mut player, &splitted[1..]),
                 Some(Command::Unequip) => unequip(&mut player),
-                Some(Command::North) => goto(&mut player, &dungeon, &Direction::North),
-                Some(Command::South) => goto(&mut player, &dungeon, &Direction::South),
-                Some(Command::West) => goto(&mut player, &dungeon, &Direction::West),
-                Some(Command::East) => goto(&mut player, &dungeon, &Direction::East),
-                Some(Command::Down) => goto(&mut player, &dungeon, &Direction::Down),
-                Some(Command::Up) => goto(&mut player, &dungeon, &Direction::Up),
+                Some(Command::North) => goto(&mut player, &dungeon, Direction::North),
+                Some(Command::South) => goto(&mut player, &dungeon, Direction::South),
+                Some(Command::West) => goto(&mut player, &dungeon, Direction::West),
+                Some(Command::East) => goto(&mut player, &dungeon, Direction::East),
+                Some(Command::Down) => goto(&mut player, &dungeon, Direction::Down),
+                Some(Command::Up) => goto(&mut player, &dungeon, Direction::Up),
                 _ => println!("I don't know what you mean."),
             }
         }
