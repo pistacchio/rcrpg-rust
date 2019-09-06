@@ -1,3 +1,6 @@
+//! Implementation of the simple text-based game [RCRPG](https://web.archive.org/web/20080212201605/http://shortcircuit.us/muddy-kinda-like-a-mud-but-single-player/)
+//! in Rust
+
 use rand::prelude::*;
 use std::borrow::BorrowMut;
 use std::collections::{HashMap, HashSet};
@@ -6,10 +9,7 @@ use std::iter::FromIterator;
 use std::ops::Add;
 use std::{fmt, io};
 
-///////////////
-// CONSTANTS //
-///////////////
-
+/// Maps each Locations to a direction
 const DIRECTION_MAPPING: [(Location, Direction); 6] = [
     (Location(0, -1, 0), Direction::North),
     (Location(0, 1, 0), Direction::South),
@@ -19,17 +19,13 @@ const DIRECTION_MAPPING: [(Location, Direction); 6] = [
     (Location(0, 0, -1), Direction::Up),
 ];
 
-///////////
-// TYPES //
-///////////
-
+/// Objects possessed by the player
 type Inventory = HashSet<Object>;
+/// Maps the (possibly user-defined) aliases to their actual action, so that for instance a player
+/// can input either `n` or `north` to go North, and can also define new aliases
 type CommandAliases = Vec<(HashSet<String>, Command)>;
 
-//////////////
-// LOCATION //
-//////////////
-
+/// 3D coordinates of objects in the dungeon
 #[derive(Hash, Eq, PartialEq, Copy, Clone)]
 struct Location(i32, i32, i32);
 
@@ -47,10 +43,7 @@ impl Debug for Location {
     }
 }
 
-////////////
-// OBJECT //
-////////////
-
+/// Objects that can be found in the dungon rooms
 #[derive(Eq, PartialEq, Hash, Copy, Clone, Debug)]
 enum Object {
     Ladder,
@@ -69,6 +62,7 @@ impl Display for Object {
 }
 
 impl Object {
+    /// Tries to parse a string to an object, like `"gold"` to `Object::Gold`
     fn from_string(s: &str) -> Option<Object> {
         match s {
             "ladder" => Some(Object::Ladder),
@@ -79,22 +73,21 @@ impl Object {
     }
 }
 
-////////////
-// PLAYER //
-////////////
-
+/// Player information
 struct Player {
+    /// Room where the player currently is
     location: Location,
+    /// The objects carried by the player
     inventory: Inventory,
+    /// The object wieled by the player, if any
     equipped: Option<Object>,
 }
 
-//////////
-// ROOM //
-//////////
-
+/// Information about each room of the dungeon
 struct Room {
+    /// Fixed description for special rooms (like the first one or the prize room)
     description: Option<String>,
+    /// Objects currently in the room
     objects: Inventory,
 }
 
@@ -106,16 +99,19 @@ impl Room {
         }
     }
 
+    /// Sets the room description
     fn with_description(mut self, description: &str) -> Self {
         self.description = Some(description.to_string());
         self
     }
 
+    /// Sets the objects in the room
     fn with_objects(mut self, objects: Vec<Object>) -> Self {
         self.objects.extend(objects);
         self
     }
 
+    /// Adds some randoms objects to the room
     fn with_random_objects(mut self, rng: &mut ThreadRng) -> Self {
         let objects: Vec<_> = vec![
             if rng.gen::<f32>() < 0.33 {
@@ -143,10 +139,7 @@ impl Room {
     }
 }
 
-/////////////
-// DUNGEON //
-/////////////
-
+/// Cardinat directions
 #[derive(Copy, Clone, Eq, PartialEq)]
 enum Direction {
     North,
@@ -171,6 +164,7 @@ impl Display for Direction {
 }
 
 impl Direction {
+    /// Tries to parse a string to a direction, like `"north"` to `Direction::North`
     fn from_string(s: &str) -> Option<Direction> {
         match s {
             "north" => Some(Direction::North),
@@ -183,12 +177,16 @@ impl Direction {
         }
     }
 
+    /// Returns the normalized 3D point of the location, for instance `Direction::North` is
+    /// `(0, -1, 0)` where `(x, y, z)`
     fn to_location(&self) -> Location {
         DIRECTION_MAPPING.iter().find(|d| d.1 == *self).unwrap().0
     }
 }
 
+/// Collection of rooms
 struct Dungeon {
+    /// The rooms that make up the dungeon
     rooms: HashMap<Location, Room>,
 }
 
@@ -210,6 +208,7 @@ impl Dungeon {
         }
     }
 
+    /// Given a room location, returns the list of `Direction`s that lead to other rooms
     fn exits_for_room(&self, location: Location) -> Vec<Direction> {
         DIRECTION_MAPPING
             .iter()
@@ -225,10 +224,7 @@ impl Dungeon {
     }
 }
 
-//////////////
-// COMMANDS //
-//////////////
-
+/// Collection of all the available commands to interact to the dungeon world
 #[derive(Debug, Copy, Clone)]
 enum Command {
     North,
@@ -248,6 +244,7 @@ enum Command {
     Alias,
 }
 
+/// Returns the list of all the default command aliases
 fn default_aliases() -> CommandAliases {
     vec![
         (
@@ -326,12 +323,14 @@ fn default_aliases() -> CommandAliases {
     ]
 }
 
+/// Tries to parse a string to a command also taking into account the aliases
 fn find_command(command: &str, aliases: &CommandAliases) -> Option<Command> {
     let command = command.to_lowercase();
 
     aliases.iter().find(|a| a.0.contains(&command)).map(|a| a.1)
 }
 
+/// Prints the help string
 fn help() {
     println!(
         "You need a sledge to dig rooms and ladders to go upwards.
@@ -341,6 +340,7 @@ Have fun!"
     )
 }
 
+/// Defines a new alias for a command
 fn alias(command_aliases: &mut CommandAliases, args: &[&str]) {
     if args.len() < 2 {
         println!("To assign an alias: alias CMQ NEW_ALIAS");
@@ -364,6 +364,7 @@ fn alias(command_aliases: &mut CommandAliases, args: &[&str]) {
     }
 }
 
+/// Describes the current rooom
 fn look(player: &Player, dungeon: &Dungeon) {
     let room = &dungeon.rooms[&player.location];
 
@@ -399,6 +400,7 @@ fn look(player: &Player, dungeon: &Dungeon) {
     }
 }
 
+/// Grabs an object lying on the floor of a room and puts it into the player's inventory
 fn take(player: &mut Player, dungeon: &mut Dungeon, args: &[&str]) {
     if args.is_empty() {
         println!("To take something: take OBJECT|all")
@@ -434,6 +436,7 @@ fn take(player: &mut Player, dungeon: &mut Dungeon, args: &[&str]) {
     }
 }
 
+/// Removes an object from the player's inventory and leaves it lying on the current room's floor
 fn drop(player: &mut Player, dungeon: &mut Dungeon, args: &[&str]) {
     if args.is_empty() {
         println!("To drop something: drop OBJECT|all")
@@ -469,6 +472,7 @@ fn drop(player: &mut Player, dungeon: &mut Dungeon, args: &[&str]) {
     }
 }
 
+/// Prints the list of object currently carries by the player
 fn inventory(player: &Player) {
     if player.inventory.is_empty() {
         println!("You are not carrying anything")
@@ -485,6 +489,7 @@ fn inventory(player: &Player) {
     }
 }
 
+/// Digs a tunnel to a new room connected to the current one
 #[allow(clippy::map_entry)]
 fn dig(player: &Player, dungeon: &mut Dungeon, rng: &mut ThreadRng, args: &[&str]) {
     if args.is_empty() {
@@ -514,6 +519,7 @@ fn dig(player: &Player, dungeon: &mut Dungeon, rng: &mut ThreadRng, args: &[&str
     }
 }
 
+/// Moves the player to an adjacent room
 fn goto(player: &mut Player, dungeon: &Dungeon, direction: &Direction) {
     if direction == &Direction::North
         && !dungeon.rooms[&player.location]
@@ -532,6 +538,7 @@ fn goto(player: &mut Player, dungeon: &Dungeon, direction: &Direction) {
     }
 }
 
+/// Equips an object
 fn equip(player: &mut Player, args: &[&str]) {
     if args.is_empty() {
         println!("To equip something: equip OBJECT");
@@ -547,6 +554,7 @@ fn equip(player: &mut Player, args: &[&str]) {
     }
 }
 
+/// Unequips an object
 fn unequip(player: &mut Player) {
     if player.equipped.is_some() {
         player.equipped = None;
@@ -556,10 +564,7 @@ fn unequip(player: &mut Player) {
     }
 }
 
-//////////
-// MAIN //
-//////////
-
+/// Main game loop
 fn main() {
     let mut command_aliases = default_aliases();
     let mut dungeon = Dungeon::new();
